@@ -1,0 +1,8 @@
+.Rproj.user
+latent-bipolar-data.Rproj
+data/
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
