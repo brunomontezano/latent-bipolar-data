@@ -1,16 +1,24 @@
 ---
 title: "Limpeza de dados para projeto de transtorno bipolar latente"
 date: 2023-08-24
+theme: journal
+code-block-border-left: true
+highlight-style: github
 author:
   - name: Bruno Braga Montezano
     id: bm
     orcid: 0000-0002-4627-1776
+    roles: [software, methodology, writing, formal analysis, data curation]
     email: brunobmontezano@gmail.com
     affiliation: 
       - name: Universidade Federal do Rio Grande do Sul
         city: Porto Alegre
         state: RS
         url: https://www.ufrgs.br/ppgpsiquiatria/
+  - name: Taiane de Azevedo Cardoso
+    id: tc
+    orcid: 0000-0003-1925-8709
+    roles: [supervision, investigation, data curation, conceptualization]
 abstract: > 
   O presente documento descreve os passos de limpeza e processamento dos dados
   para o projeto de transtorno bipolar latente.
@@ -41,4 +49,141 @@ lang: pt-br
 format: html
 ---
 
-## 
+# Importação, limpeza e exportação dos dados
+
+Os dados foram importados a partir de um arquivo chamado `coorte-t1-t2-24-08-17.sav`
+na pasta `data` na raíz do projeto do RStudio. A função `read_sav` do pacote `haven`
+foi utilizada para carregar os dados brutos. Na sequência, os nomes das variáveis
+foram limpos através da função `clean_names` do pacote `janitor`.
+As observações do *dataset* foram filtradas para manter apenas os sujeitos que
+foram reavaliados na segunda onda do estudo, e também não apresentaram histórico
+de mania ou hipomania na primeira avaliação, levando em conta que o objetivo do
+estudo é explorar os casos incidentes de transtorno bipolar. Isso se dá por uma
+limitação na coleta de dados da primeira onda. Os participantes não eram perguntados
+sobre história de depressão na vida caso não fechassem critérios para episódio
+depressivo atual na entrevista diagnóstica.
+Após, as variáveis de interesse para o estudo juntamente com o desfecho foram
+selecionadas por meio da função `select` do pacote `dplyr`. A variável `rec`
+trata-se do identificador de cada uma das observações.
+Os itens da CTQ foram transformados em numérico pois estavam originalmente em
+formato de caractere (*string*). O processo foi realizado com a função `as.numeric`,
+aplicada através da função `mutate` do pacote `dplyr` em conjunto com a função
+`across` para iterar por cada item do instrumento.
+
+Ao final os dados foram exportados em formato `.sav` do SPSS para facilitar o
+acesso aos rótulos tanto das variáveis quanto de suas categorias.
+
+```{r limpar-dados}
+dados_raw <- haven::read_sav("data/coorte-t1-t2-24-08-17.sav")
+
+dados_limpos <- dados_raw |>
+  janitor::clean_names() |>
+  dplyr::filter(perdas == 1 &
+                  hipo_t1 == 0 & mania_t1 == 0) |>
+  dplyr::select(
+    rec,
+    # Identificador de cada participante
+    bipolar_conferido,
+    # Diagnóstico de transtorno bipolar no tempo 2 - desfecho
+    sexo_t1,
+    # Sexo
+    cpele_t1,
+    # Cor da pele
+    abep3_t1,
+    # Nível socioeconômico (ABEP)
+    escol_t1,
+    # Escolaridade
+    trabatu_t1,
+    # Trabalha atualmente
+    estano_t1,
+    # Estuda no ano de avaliação
+    cinto_t1,
+    # Usa cinto
+    capecet_t1,
+    # Capacete
+    siverm_t1,
+    # Sinal vermelho
+    dirigibb_t1,
+    # Dirigir bêbado
+    acidente_t1,
+    # Acidente
+    agress_t1,
+    # Agressão
+    afogof_t1,
+    # Familiar com arma de fogo
+    abranca_t1,
+    # Arma branca
+    afogo_t1,
+    # Arma de fogo
+    dplyr::matches("^srq\\d{1,2}_t1$"),
+    # Itens da SRQ
+    cons_t1,
+    # Já consultou
+    hospner_t1,
+    # Hospitalizado por nervos
+    medic_t1,
+    # Medicação
+    smae_t1,
+    # Mãe sofreu de nervos
+    spai_t1,
+    # Pai sofreu de nervos
+    savo_t1,
+    # Avós sofreram de nervos
+    sirmao_t1,
+    # Irmãos sofreram de nervos
+    sfilho_t1,
+    # Filhos sofreram de nervos
+    dplyr::matches("^bsi[1-5]_t1$"),
+    # Itens de 1 a 5 da BSI
+    dplyr::matches("^hcl[2-3].*_t1$"),
+    # Item 2 e itens da parte 3 da HCL-32
+    dplyr::matches("^bdi.*$"),
+    # Itens da BDI
+    dplyr::matches("^qlusou[c-j]1*_t1$"),
+    # Uso ao longo da vida de substâncias ilícitas
+    tabaco2_t1,
+    # Sugestivo de abuso/dependência de tabaco
+    alcool_t1,
+    # Sugestivo de abuso/dependência de álcool
+    forcsex_t1,
+    # Sexo forçado
+    dplyr::matches("^ctq.*$"),
+    # Itens da CTQ
+    edmat_t1,
+    # Episódio depressivo atual - baseline
+    rsat_t1,
+    # Risco de suicídio - baseline
+    agoraat_t1,
+    # Agorafobia - baseline
+    pansfo_t1,
+    # Pânico sem fobia - baseline
+    pancfo_t1,
+    # Pânico com fobia - baseline
+    agospan_t1,
+    # Agorafobia sem pânico - baseline
+    fobsoa_t1,
+    # Fobia social - baseline
+    tocat_t1,
+    # TOC - baseline
+    tagat_t1,
+    # TAG - baseline
+    teptat_t1 # TEPT - baseline
+  ) |> 
+  dplyr::mutate(
+    dplyr::across(dplyr::matches("^ctq.*$"),
+                  \(x) as.numeric(x))
+  )
+
+# Os dados foram exportados em formato sav para manter os labels originais
+# das variáveis e dos valores de cada categoria
+dados_limpos |>
+  haven::write_sav("data/latent_bipolar_data_2023_08_24.sav")
+```
+
+# Como ficaram os dados após os filtros?
+
+```{r mostrar-dados}
+dados_limpos |> 
+  dplyr::glimpse()
+```
+
